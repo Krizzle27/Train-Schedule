@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  	<meta charset="UTF-8">
+  	<title>Train Schedule</title>
+  	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+      <script src="https://www.gstatic.com/firebasejs/4.11.0/firebase.js"></script>
+	<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/momentjs/2.12.0/moment.min.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<style>
+.jumbotron {
+    margin-bottom: 0px;
+    background-image: url(https://78.media.tumblr.com/5327995e07c131e65048a6a42098e537/tumblr_nvcpnaEmyK1thu2vbo7_500.gif);
+    background-position: 0% 25%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    color: white;
+    text-shadow: black 0.3em 0.3em 0.3em;
+}
+</style>
+<body>
+	<div class="container">
+		<div class="jumbotron text-center">
+			<h1>Train Times</h1>
+        </div>
+        <br>
+
+
+		<div class="panel panel-success text-success">
+			<div class="panel-heading"><h3>Current Train Schedule</h3></div>
+			<div class="panel-body">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Train Name</th>
+							<th>Destination</th>
+							<th>Frequency(min)</th>
+							<th>Next Arrival</th>
+							<th>Minutes Away</th>
+						</tr>
+					</thead>
+
+
+					<tbody id="add-row">
+					</tbody>
+					
+				</table>
+			</div>
+		</div>
+
+
+
+		<div class="panel panel-success text-success">
+			<div class="panel-heading">
+				<h3>Add Train</h3>
+			</div>
+
+			<div class="panel-body">
+				<form>
+					<div class="form-group">
+						<label for="text">Train Name</label>
+						<input type="text" class="form-control" id="train-name">
+					</div>
+
+					<div class="form-group">
+						<label for="text">Destination</label>
+						<input type="text" class="form-control" id="destination">
+					</div>
+
+					<div class="form-group">
+						<label for="text">First Train Time (HH:mm - Military Time)</label>
+						<input type="text" class="form-control" id="first-train">
+					</div>
+
+					<div class="form-group">
+						<label for="text">Frequency(min)</label>
+						<input type="text" class="form-control" id="frequency">
+					</div>
+
+					<button type="submit" id="add-train" class="btn btn-success" id="addTrain">Submit</button>
+				</form>
+			</div>
+		</div>
+    </div>
+    <script>
+    $(document).ready(function(){
+        var config = {
+            apiKey: "AIzaSyBYCuCH-N7g-P3Lo5CTucYcvL9P8Y2peHk",
+            authDomain: "train-schedule-46e1c.firebaseapp.com",
+            databaseURL: "https://train-schedule-46e1c.firebaseio.com",
+            projectId: "train-schedule-46e1c",
+            storageBucket: "train-schedule-46e1c.appspot.com",
+            messagingSenderId: "989645678830"
+          };
+          firebase.initializeApp(config);
+
+
+    var database = firebase.database();
+
+
+    var name;
+    var destination;
+    var firstTrain;
+    var frequency = 0;
+
+    $("#add-train").on("click", function() {
+        event.preventDefault();
+
+        name = $("#train-name").val().trim();
+        destination = $("#destination").val().trim();
+        firstTrain = $("#first-train").val().trim();
+        frequency = $("#frequency").val().trim();
+
+
+        database.ref().push({
+            name: name,
+            destination: destination,
+            firstTrain: firstTrain,
+            frequency: frequency,
+            dateAdded: firebase.database.ServerValue.TIMESTAMP
+        });
+        $("form")[0].reset();
+    });
+
+    database.ref().on("child_added", function(childSnapshot) {
+        var nextArr;
+        var minAway;
+
+        var firstTrainNew = moment(childSnapshot.val().firstTrain, "hh:mm").subtract(1, "years");
+
+        var diffTime = moment().diff(moment(firstTrainNew), "minutes");
+        var remainder = diffTime % childSnapshot.val().frequency;
+
+        var minAway = childSnapshot.val().frequency - remainder;
+
+        var nextTrain = moment().add(minAway, "minutes");
+        nextTrain = moment(nextTrain).format("hh:mm");
+
+        $("#add-row").append("<tr><td>" + childSnapshot.val().name +
+                "</td><td>" + childSnapshot.val().destination +
+                "</td><td>" + childSnapshot.val().frequency +
+                "</td><td>" + nextTrain + 
+                "</td><td>" + minAway + "</td></tr>");
+
+
+        }, function(errorObject) {
+            console.log("Errors handled: " + errorObject.code);
+    });
+
+    database.ref().orderByChild("dateAdded").limitToLast(1).on("child_added", function(snapshot) {
+
+        $("#name-display").html(snapshot.val().name);
+        $("#email-display").html(snapshot.val().email);
+        $("#age-display").html(snapshot.val().age);
+        $("#comment-display").html(snapshot.val().comment);
+    });
+});
+    </script>
+</body>
+</html>
